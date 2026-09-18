@@ -14,4 +14,9 @@ int main(){
     cin >> b;
     sum = a+b;
     cout << "Result is " << sum << endl;
+
+
+    cout << "HelloWorld " << sum << endl;
+    cout << "Penguin beautiful makmak " << sum << endl;
+    cout << "I love konsuy " << sum << endl;
 }
