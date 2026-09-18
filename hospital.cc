@@ -19,4 +19,6 @@ int main(){
     cout << "HelloWorld " << sum << endl;
     cout << "Penguin beautiful makmak " << sum << endl;
     cout << "I love konsuy " << sum << endl;
+
+    cout << "Eiei";
 }
