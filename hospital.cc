@@ -21,4 +21,5 @@ int main(){
     cout << "I love konsuy " << sum << endl;
 
     cout << "Eiei";
+    cout << "Goodbye";
 }
