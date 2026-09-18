@@ -5,6 +5,8 @@ int main(){
     string name;
     cout << "your name : ";
     cin >> name;
+    cout << name;
 
-    cout << "Good";
+
+    cout<<"Hello World";
 }
