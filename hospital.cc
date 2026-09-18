@@ -6,7 +6,4 @@ int main(){
     cout << "your name : ";
     cin >> name;
     cout << name;
-
-
-    cout<<"Hello World";
 }
