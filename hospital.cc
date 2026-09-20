@@ -82,23 +82,61 @@ public:
             cout << "----------------------------------";
         } cout << endl;
     }
+
+    // penguin
+    void servePatient(){ 
+        if (patientCount == 0){
+            cout << "Queue is empty, no one to serve" << endl;
+            return;
+        }
+
+        //index ของคนที่ต้องรักษาก่อน (priority สูงสุด)
+        int bestIndex = 0; //เริ่มสมมติว่าคนแรกสุดคือคนที่ priority สูงสุดก่อน
+        for (int i = 1; i < patientCount; i++){
+            if (queue[i].level < queue[bestIndex].level){
+                //levelที่รุนแรงต้องรักษาก่อน
+                bestIndex = i;
+            }
+            else if (queue[i].level == queue[bestIndex].level){
+                //levelเท่ากันใครมาก่อนได้ก่อน (FIFO)
+                if (queue[i].queueOrder < queue[bestIndex].queueOrder){
+                    bestIndex = i;
+                }
+            }
+        }
+
+        //แสดงข้อมูลคนที่ถูกเรียกไปรักษา
+        cout << endl << "=> Now serving: " << queue[bestIndex].name
+             << " | Symptom: " << queue[bestIndex].symptom
+             << " | Level " << queue[bestIndex].level << endl;
+        cout << "----------------------------------------------------------------------" << endl;
+
+        //ลบคนนี้ออกจาก array โดยเลื่อนสมาชิกที่เหลือขึ้นมาแทนที่ (ปิดช่องว่าง)
+        for (int i = bestIndex; i < patientCount - 1; i++){
+            queue[i] = queue[i + 1];
+        }
+        patientCount--; //ลดจำนวนผู้ป่วยในคิวลง 1
+    } 
 };
 int main(){
     Hospital h;
     string choice;
     cout << "-------------------- Welcome to JubuJubu Hospital --------------------" << endl;
    do{
-        cout << "(Choose number) 1.Add Patient/ 2.Show Queue/ 3.Exit: ";
+        // penguin
+        cout << "(Choose number) 1.Add Patient/ 2.Serve Patient/ 3.Show Queue/ 4.Exit: ";// เพิ่ม Serve Patient เข้ามา
         getline(cin >> ws, choice);
         if (choice == "1"){
             h.addPatientInput();
         } else if (choice == "2"){
-            h.showQueue();
+            h.servePatient(); //เรียกฟังก์ชัน Serve
         } else if (choice == "3"){
+            h.showQueue();
+        } else if (choice == "4"){ //เปลี่ยนเลขจาก 3 เป็น 4 แทรกเมนูใหม่เข้ามา
             cout << "Exited ..." << endl;
         } else{
             cout << "** Invalid number, please enter again **" << endl;
         }
-    } while(choice != "3");
+    } while(choice != "4"); //เปลี่ยนเลขจาก 3 เป็น 4
     return 0;
 }
