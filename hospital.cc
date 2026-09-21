@@ -259,7 +259,7 @@ public:
         }
 
         //แสดงข้อมูลคนที่ถูกเรียกไปรักษา
-        cout << endl << "=> Now serving: " << queue[bestIndex].name
+        cout << "=> Now serving: " << queue[bestIndex].name
              << " | Symptom: " << queue[bestIndex].symptom
              << " | Level " << queue[bestIndex].level << endl;
         cout << "----------------------------------------------------------------------" << endl;
