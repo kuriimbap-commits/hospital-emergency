@@ -83,6 +83,159 @@ public:
         } cout << endl;
     }
 
+/// benzzz
+class Priority {
+private:
+    int level;
+    string sysptom;
+    int queueOrder;
+    time_t arriveTime;
+
+public:
+
+    // Constructor
+    Priority(int level, string sysptom, int queueOrder, time_t arriveTime) {
+        this->level = level;
+        this->sysptom = sysptom;
+        this->queueOrder = queueOrder;
+        this->arriveTime = arriveTime;
+    }
+    //เลื่อนlevel
+    int getPriority()const{
+        //เวลาปัจจุบัน
+        time_t currentTime=time(0);
+        //เวลาที่รอ
+        double waitTime = difftime(currentTime,arriveTime);
+         int wiatMinutes=waitTime/60;
+         if(level<=2){
+            return level;
+         }
+         if (wiatMinutes>30)
+         {
+           return level-1;
+         }
+    return level;
+    
+    }
+
+    // ดูความรุนแรงของอาการ
+    // เลขน้อย = ฉุกเฉินกว่า
+    int inSeriousSysptom() const {
+
+        // RED
+        if (sysptom == "Cardiac Arrest") {
+            return 1;
+        }
+        else if (sysptom == "Not Breathing") {
+            return 2;
+        }
+        else if (sysptom == "Unconsciousness") {
+            return 3;
+        }
+        else if (sysptom == "Severe Shock") {
+            return 4;
+        }
+        else if (sysptom == "Severe Bleeding") {
+            return 5;
+        }
+
+        // YELLOW
+        else if (sysptom == "Chest Pain") {
+            return 6;
+        }
+        else if (sysptom == "Difficult Breathing") {
+            return 7;
+        }
+        else if (sysptom == "Severe Abdominal Pain") {
+            return 8;
+        }
+        else if (sysptom == "Altered Mental Status") {
+            return 9;
+        }
+        else if (sysptom == "High Fever with Convulsion") {
+            return 10;
+        }
+
+        // GREEN
+        else if (sysptom == "Mild Fever") {
+            return 11;
+        }
+        else if (sysptom == "Headache") {
+            return 12;
+        }
+        else if (sysptom == "Nausea and Vomiting") {
+            return 13;
+        }
+        else if (sysptom == "Sprain") {
+            return 14;
+        }
+
+        // WHITE
+        else if (sysptom == "Common Cold") {
+            return 15;
+        }
+        else if (sysptom == "Minor Rash") {
+            return 16;
+        }
+
+        // ไม่พบอาการ
+        return 11;
+    }
+
+    // เปรียบเทียบ Priority
+    //1. level 2. อาการ 3. ลำดับคิว
+    bool isHighPriority(const Priority& other) const {
+        int myLevel = getPriority();
+        int otherLevel = other.getPriority();
+
+        // 1. ดู Level
+        if (myLevel < otherLevel) {
+            return true;
+        }
+
+        if (myLevel > otherLevel) {
+            return false;
+        }
+
+        // 2. Level เท่ากัน
+        // ดูความฉุกเฉินของอาการ
+        int mySysptomPriority = inSeriousSysptom();
+        int otherSysptomPriority = other.inSeriousSysptom();
+
+        if (mySysptomPriority < otherSysptomPriority) {
+            return true;
+        }
+
+        if (mySysptomPriority > otherSysptomPriority) {
+            return false;
+        }
+
+        // 3. Level และอาการเท่ากัน
+        // ดูลำดับคิว
+        return queueOrder < other.queueOrder;
+    }
+
+    // แสดง Priority
+    void showPriority() {
+        cout << "Level       : " << level << endl;
+        cout << "Symptom     : " << sysptom << endl;
+        cout << "Queue Order : " << queueOrder << endl;
+    }
+
+    // Getter
+    int getLevel() const {
+        return level;
+    }
+
+    string getSysptom() const {
+        return sysptom;
+    }
+
+    int getQueueOrder() const {
+        return queueOrder;
+    }
+};
+
     // penguin
     void servePatient(){ 
         if (patientCount == 0){
