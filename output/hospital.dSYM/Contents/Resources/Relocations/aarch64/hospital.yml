@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/piggybubu/Desktop/DS/hospital-emergency/output/hospital'
+relocations:     []
+...
