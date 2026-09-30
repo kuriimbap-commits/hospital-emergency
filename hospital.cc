@@ -6,8 +6,7 @@
 using namespace std;
 
 // Cream
-const int SYMPTOM_COUNT = 16;
-const string SYMPTOMS[SYMPTOM_COUNT] = {
+const string SYMPTOMS[] = {
     "Cardiac Arrest", "Not Breathing", "Unconsciousness",
     "Severe Shock", "Severe Bleeding", "Chest Pain",
     "Difficult Breathing", "Severe Abdominal Pain", "Altered Mental Status",
@@ -121,31 +120,16 @@ private:
     Patient *queue; //ARRAY เเบบ dynamic (x2)
     int patientCount = 0; //จน.ผู้ป่วยในคิว
     int orderCount = 0;
-    int capacity = 0; //ขนาดสูงสุดของ arr ตอนนี้
 
     // เก็บประวัติผู้ป่วยที่รักษาแล้ว
     HistoryPatient *history; //ARRAY
     int historyCount = 0;
-    int historyCapacity = 4;
 
-    void resizeQueue(){ //เพิ่มขนาดของ queue เป็น 2 เท่า
-        int newCapacity = capacity * 2; //4 -> 8 -> 16
-        Patient *newQueue = new Patient[newCapacity]; //ย้ายผู้ป่วยจาก queue เก่าไปยัง queue ใหม่
-
-        for(int i = 0; i < patientCount; i++) newQueue[i] = queue[i]; //คัดลอกผู้ป่วยจาก arr เก่าลง arr ใหม่
-        delete[] queue; //ลบ arr เก่า (ป้องกัน memory leak)
-        queue = newQueue; //ให้ queue ไปใชี้ที่ arr ตัวใหม่
-        capacity = newCapacity; //อัปเดตค่า capacity
-    }
     // เพิ่มข้อมูลลงประวัติ
     void addHistory(Patient p){
-        if(historyCount == historyCapacity){
-            historyCapacity *= 2;
-            HistoryPatient *newHistory = new HistoryPatient[historyCapacity];
-
-            for(int i = 0; i < historyCount; i++) newHistory[i] = history[i];
-            delete[] history;
-            history = newHistory;
+        if(historyCount >= 100){
+            cout << "History is full" << endl;
+            return;
         }
         history[historyCount].name = p.name;
         history[historyCount].symptom = p.symptom;
@@ -156,21 +140,17 @@ private:
     }
 public:
     Hospital(){ //Constructor
-        capacity = 4; //สร้าง new Patient[4]
         patientCount = 0;
         orderCount = 0;
-        queue = new Patient[capacity];
-
-        // สร้าง array สำหรับเก็บประวัติ
-        history = new HistoryPatient[historyCapacity];
     }
     ~Hospital(){ //Destructor
-        delete[] queue;
-        delete[] history;
     }
     //ADD PATIENT
     void addPatient(string name, string symptom, int level){
-        if(patientCount == capacity) resizeQueue(); //คิวเต็ม เรียกใช้ resizeQueue()
+        if(patientCount >= 100){
+            cout << "Queue is full" << endl;
+            return;
+        }
         queue[patientCount].name = name; //ใส่ข้อมูลลง queue index ถัดไป
         queue[patientCount].symptom = symptom;
         queue[patientCount].level = level;
@@ -208,12 +188,13 @@ public:
             }break;
         }cout << endl << "========= Select patient symptom =========" << endl;
 
-        for(int i = 0; i < SYMPTOM_COUNT; i++)
+        int count = sizeof(SYMPTOMS)/sizeof(SYMPTOMS[0]);
+        for(int i = 0; i < count; i++){
             cout << i + 1 << ". " << SYMPTOMS[i] << endl;
-
+        }
         // แก้เวลารับตัวเลข "5-1", "3-", "56-25" ได้
         while(true){
-            cout << endl << "Enter number (1-" << SYMPTOM_COUNT << "): ";
+            cout << endl << "Enter number (1-" << count << "): ";
 
             string sInput;
             getline(cin, sInput);
@@ -227,7 +208,7 @@ public:
             }
             if(validDigits){
                 s = stoi(sInput); //แปลงข้อความเป็นตัวเลข หลังจากมั่นใจแล้วว่าเป็นตัวเลขล้วนๆ
-                if(s >= 1 && s <= SYMPTOM_COUNT) break; //ผ่านทุกเงื่อนไข ออกจาก loop
+                if(s >= 1 && s <= count) break; //ผ่านทุกเงื่อนไข ออกจาก loop
             }
             cout << "** Invalid symptom number **" << endl;
         }symptom = SYMPTOMS[s - 1];
