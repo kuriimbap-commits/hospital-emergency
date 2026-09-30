@@ -7,12 +7,13 @@ using namespace std;
 
 // Cream
 const string SYMPTOMS[] = {
-    "Cardiac Arrest", "Not Breathing", "Unconsciousness",
-    "Severe Shock", "Severe Bleeding", "Chest Pain",
-    "Difficult Breathing", "Severe Abdominal Pain", "Altered Mental Status",
-    "High Fever with Convulsion", "Mild Fever", "Headache",
-    "Nausea and Vomiting", "Sprain", "Common Cold", "Minor Rash"
-};
+    "Cardiac Arrest", "Not Breathing", "Unconsciousness", "Severe Shock", "Severe Bleeding",
+    "Chest Pain", "Difficult Breathing", "Severe Abdominal Pain", "Altered Mental Status", "High Fever with Convulsion",
+    "Mild Fever", "Headache", "Nausea and Vomiting", "Sprain", "Common Cold", "Minor Rash"};
+const string LEVELS[] = {"Emergency", "Urgency", "Semi-urgency", "Non-urgency"};
+const string ZONES[] = {"RED","RED","RED","RED","RED","YELLOW","YELLOW","YELLOW","YELLOW","YELLOW","GREEN","GREEN","GREEN","GREEN", "WHITE","WHITE"};
+const string MENU[] = {"Add Patient", "Serve Patient", "Show Queue", "History & Statistics", "Exit"};
+
 class Patient{
 public:
     string name;
@@ -61,26 +62,12 @@ public:
     // ดูความรุนแรงของอาการ
     // เลขน้อย = ฉุกเฉินกว่า
     int inSeriousSysptom() const{
-        // RED
-        if(sysptom == "Cardiac Arrest") return 1;
-        else if(sysptom == "Not Breathing") return 2;
-        else if(sysptom == "Unconsciousness") return 3;
-        else if(sysptom == "Severe Shock") return 4;
-        else if(sysptom == "Severe Bleeding") return 5;
-        else if(sysptom == "Chest Pain") return 6; // YELLOW
-        else if(sysptom == "Difficult Breathing") return 7;
-        else if(sysptom == "Severe Abdominal Pain") return 8;
-        else if(sysptom == "Altered Mental Status") return 9;
-        else if(sysptom == "High Fever with Convulsion") return 10;
-        else if(sysptom == "Mild Fever") return 11; // GREEN
-        else if(sysptom == "Headache") return 12;
-        else if(sysptom == "Nausea and Vomiting") return 13;
-        else if(sysptom == "Sprain") return 14;
-        else if(sysptom == "Common Cold") return 15; // WHITE
-        else if(sysptom == "Minor Rash") return 16;
-
-        // ไม่พบอาการ
-        return 11;
+        int count = sizeof(SYMPTOMS)/sizeof(SYMPTOMS[0]);
+        for(int i = 0; i < count; i++){
+            if(SYMPTOMS[i] == sysptom) return i + 1;
+    }
+    // ไม่พบอาการ
+    return 11;
     }
     // เปรียบเทียบ Priority
     //1. level 2. อาการ 3. ลำดับคิว
@@ -117,12 +104,10 @@ public:
 };
 class Hospital{ //จัดการคิวผู้ป่วย
 private:
-    Patient *queue; //ARRAY เเบบ dynamic (x2)
+    Patient queue[100];
+    HistoryPatient history[100];
     int patientCount = 0; //จน.ผู้ป่วยในคิว
     int orderCount = 0;
-
-    // เก็บประวัติผู้ป่วยที่รักษาแล้ว
-    HistoryPatient *history; //ARRAY
     int historyCount = 0;
 
     // เพิ่มข้อมูลลงประวัติ
@@ -190,7 +175,7 @@ public:
 
         int count = sizeof(SYMPTOMS)/sizeof(SYMPTOMS[0]);
         for(int i = 0; i < count; i++){
-            cout << i + 1 << ". " << SYMPTOMS[i] << endl;
+            cout << i + 1 << ". " << SYMPTOMS[i] << " [" << ZONES[i] << "]" << endl;
         }
         // แก้เวลารับตัวเลข "5-1", "3-", "56-25" ได้
         while(true){
@@ -215,8 +200,11 @@ public:
 
         while(true){ //check level input
             //1.วิกฤต, 2.ฉุกเฉิน, 3.ไม่รุนแรง, 4.ทั่วไป
-            cout << endl << "========================= Enter patient level =========================" << endl
-                 << " 1.Emergency/ 2.Urgency/ 3.Semi-urgency/ 4.Non-urgency : ";
+            cout << endl << "========================= Enter patient level =========================" << endl;
+            for (int i = 0; i < 4; i++){
+                cout << " " << i + 1 << "." << LEVELS[i];
+                if(i < 3) cout << "/";
+            } cout << " : ";
 
             if(cin >> level && level >= 1 && level <= 4){
                 string check;
@@ -244,7 +232,7 @@ public:
             return;
         }
         // สร้าง array เก็บ index แล้วเรียงตามลำดับที่จะถูกเรียกรักษา (ไม่แตะ queue จริง)
-        int *order = new int[patientCount];
+        int order[100];
         for(int i = 0; i < patientCount; i++) order[i] = i;
 
         // insertion sort โดยใช้ isHighPriority เป็นตัวเทียบ
@@ -279,7 +267,6 @@ public:
             cout << "-------------------------------------------";
         }
         cout << endl;
-        delete[] order;
     }
     //SERVE
     // penguin
@@ -366,9 +353,15 @@ int main(){
     string choice;
 
     cout << endl << "================================= Welcome to JubuJubu Hospital =================================" << endl;
+    int menuCount = sizeof(MENU)/sizeof(MENU[0]);
     do{
+        cout << endl << "(Choose number) ";
+        for(int i = 0; i < menuCount; i++){
+            cout << i + 1 << "." << MENU[i];
+            if(i < menuCount - 1) cout << "/ ";
+        } cout << ": ";
+
         // penguin
-        cout << endl << "(Choose number) 1.Add Patient/ 2.Serve Patient/ 3.Show Queue/ 4.History & Statistics/ 5.Exit: ";
         getline(cin >> ws, choice);
 
         if(choice == "1"){
