@@ -120,6 +120,10 @@ private:
     Patient *queue; //ARRAY เเบบ dynamic (x2)
     int patientCount = 0; //จน.ผู้ป่วยในคิว
     int orderCount = 0;
+<<<<<<< Updated upstream
+=======
+    int capacity = 0; //ขนาดสูงสุดของ arr ตอนนี้ 
+>>>>>>> Stashed changes
 
     // เก็บประวัติผู้ป่วยที่รักษาแล้ว
     HistoryPatient *history; //ARRAY
