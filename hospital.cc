@@ -29,10 +29,9 @@ const int WAIT_LIMIT_MIN   = 30;  // รอเกินกี่นาทีถ�
 const int DEFAULT_RANK     = 11;  // rank เมื่อไม่พบอาการ
 
 // ตรวจตอนคอมไพล์ว่า SYMPTOMS กับ ZONES มีจำนวนเท่ากัน
-static_assert(sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]) == sizeof(ZONES) / sizeof(ZONES[0]),
-              "SYMPTOMS and ZONES must have the same size");
+static_assert(sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]) == sizeof(ZONES) / sizeof(ZONES[0]), "SYMPTOMS and ZONES must have the same size");
 
-// ================= PRIORITY (ตัวเปรียบเทียบ สร้างชั่วคราวตอนเทียบ) =================
+// PRIORITY สร้างชั่วคราว เปรียบเทียบผู้ป่วย 2 คนว่าใครควรรักษาก่อน
 class Priority{
 private:
     int level;
@@ -46,23 +45,23 @@ public:
         this->queueOrder = queueOrder;
         this->arriveTime = arriveTime;
     }
-    // เลื่อน level ถ้ารอนาน
+    // คำนวณการเลื่อน level ถ้ารอนาน
     int getPriority() const{
-        double waitTime = difftime(time(0), arriveTime);
+        double waitTime = difftime(time(0), arriveTime); //วินาที
         int waitMinutes = waitTime / 60;
 
         if(level <= NO_PROMOTE_LEVEL) return level;
         if(waitMinutes > WAIT_LIMIT_MIN) return level - 1;
         return level;
     }
-    // ใช้ตำแหน่งใน SYMPTOMS[] เป็น rank (index 0 = rank 1, เลขน้อย = ฉุกเฉินกว่า)
-    int inSeriousSysptom() const{
+    // หา rank อาการ
+    int inSeriousSysptom() const{ //วนหาอาการใน SYMPTOMS[]
         for(int i = 0; i < SYMPTOM_COUNT; i++){
             if(SYMPTOMS[i] == sysptom) return i + 1;
         }
         return DEFAULT_RANK; // ไม่พบอาการ
     }
-    // 1. level  2. อาการ  3. ลำดับคิว
+    // ตัดสินว่าใครก่อน
     bool isHighPriority(const Priority& other) const{
         int myLevel = getPriority();
         int otherLevel = other.getPriority();
@@ -77,9 +76,10 @@ public:
         return queueOrder < other.queueOrder;
     }
 };
-class Hospital{
+class Hospital{ //จัดการคิว
 private:
     // คิวผู้ป่วย: index เดียวกัน = คนเดียวกัน
+    //คิว ปจบ.
     string names[MAX_SIZE];
     string symptoms[MAX_SIZE];
     int levels[MAX_SIZE];
@@ -117,6 +117,7 @@ private:
 public:
     bool isFull() const{ return patientCount >= MAX_SIZE; }
 
+    // เพิ่มผู้ป่วย
     void addPatient(string name, string symptom, int level){
         if(isFull()){
             cout << "Queue is full" << endl;
@@ -131,6 +132,7 @@ public:
         cout << name << " => added to queue with level " << level << endl;
     }
 
+    // รับข้อมูลจากผู้ป่วย + ตรวจสอบ
     void addPatientInput(){
         if(isFull()){
             cout << "Queue is full" << endl;
@@ -148,7 +150,7 @@ public:
                 unsigned char c = (unsigned char)name[i];
                 bool isEnglishLetter = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
                 bool isSpace = (c == ' ');
-                bool isThaiByte = (c >= 0x80); // ตัวอักษรไทยใน UTF-8 byte >= 0x80
+                bool isThaiByte = (c >= 0x80);
 
                 if(!(isEnglishLetter || isSpace || isThaiByte)){
                     invalidChar = true; break;
@@ -216,12 +218,12 @@ public:
         addPatient(name, symptom, level);
     }
 
-    void showQueue(){
+    void showQueue(){ // เเสดงคิวตามลำดับ ค.สำคัญ
         if(patientCount == 0){
             cout << "Queue is empty" << endl;
             return;
         }
-        // order[] เก็บ index เรียงตามลำดับที่จะถูกเรียก (ไม่แตะคิวจริง)
+        // order[] เก็บ index เรียงตามลำดับที่จะถูกเรียก
         int order[MAX_SIZE];
         for(int i = 0; i < patientCount; i++) order[i] = i;
 
@@ -260,6 +262,7 @@ public:
         cout << endl;
     }
 
+    // เรียกผู้ป่วยเข้ารักษา
     void servePatient(){
         if(patientCount == 0){
             cout << "Queue is empty, no one to serve" << endl;
@@ -277,6 +280,7 @@ public:
              << " | Level " << levels[bestIndex] << " (" << LEVELS[levels[bestIndex] - 1] << ")" << endl;
         cout << "------------------------------------------------------------------------------------------------" << endl;
 
+        // บันทึกลงประวัติ
         addHistory(bestIndex);
 
         // ลบออกจากคิว: เลื่อนสมาชิกถัดไปขึ้นมา ทำครบทุก array
@@ -290,6 +294,7 @@ public:
         patientCount--;
     }
 
+    // ประวัติ + สถิติ
     void showHistory(){
         cout << endl << "=========== PATIENT HISTORY & STATISTICS ===========" << endl;
 

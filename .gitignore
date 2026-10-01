@@ -1,1 +1,3 @@
-hospital.exe
+*.exe
+output/
+tess.cc
