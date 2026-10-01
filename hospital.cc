@@ -5,33 +5,34 @@
 #include <iomanip>
 using namespace std;
 
-// Cream
+const int MAX_SIZE = 100;
+
 const string SYMPTOMS[] = {
     "Cardiac Arrest", "Not Breathing", "Unconsciousness", "Severe Shock", "Severe Bleeding",
     "Chest Pain", "Difficult Breathing", "Severe Abdominal Pain", "Altered Mental Status", "High Fever with Convulsion",
     "Mild Fever", "Headache", "Nausea and Vomiting", "Sprain", "Common Cold", "Minor Rash"};
+const string ZONES[] = {
+    "RED", "RED", "RED", "RED", "RED",
+    "YELLOW", "YELLOW", "YELLOW", "YELLOW", "YELLOW",
+    "GREEN", "GREEN", "GREEN", "GREEN",
+    "WHITE", "WHITE"};
 const string LEVELS[] = {"Emergency", "Urgency", "Semi-urgency", "Non-urgency"};
-const string ZONES[] = {"RED","RED","RED","RED","RED","YELLOW","YELLOW","YELLOW","YELLOW","YELLOW","GREEN","GREEN","GREEN","GREEN", "WHITE","WHITE"};
 const string MENU[] = {"Add Patient", "Serve Patient", "Show Queue", "History & Statistics", "Exit"};
 
-class Patient{
-public:
-    string name;
-    string symptom; //อาการ
-    int level = 0; //ค.รุนเเรง
-    int queueOrder = 0; //ลำดับคิว
-    time_t arriveTime = 0;
-};
-// เก็บข้อมูลผู้ป่วยที่รักษาแล้ว
-class HistoryPatient{
-public:
-    string name;
-    string symptom;
-    int level = 0;
-    time_t arriveTime = 0;
-    time_t serveTime = 0;
-};
-//PRIORITY QUEUE
+// จำนวนสมาชิก คำนวณจาก array เอง (ไม่ต้องนับมือ)
+const int SYMPTOM_COUNT = sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]);
+const int LEVEL_COUNT   = sizeof(LEVELS)   / sizeof(LEVELS[0]);
+const int MENU_COUNT    = sizeof(MENU)     / sizeof(MENU[0]);
+
+const int NO_PROMOTE_LEVEL = 2;   // level 1-2 ไม่เลื่อนขั้น
+const int WAIT_LIMIT_MIN   = 30;  // รอเกินกี่นาทีถึงเลื่อน level
+const int DEFAULT_RANK     = 11;  // rank เมื่อไม่พบอาการ
+
+// ตรวจตอนคอมไพล์ว่า SYMPTOMS กับ ZONES มีจำนวนเท่ากัน
+static_assert(sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]) == sizeof(ZONES) / sizeof(ZONES[0]),
+              "SYMPTOMS and ZONES must have the same size");
+
+// ================= PRIORITY (ตัวเปรียบเทียบ สร้างชั่วคราวตอนเทียบ) =================
 class Priority{
 private:
     int level;
@@ -39,127 +40,115 @@ private:
     int queueOrder;
     time_t arriveTime;
 public:
-    // Constructor
     Priority(int level, string sysptom, int queueOrder, time_t arriveTime){
         this->level = level;
         this->sysptom = sysptom;
         this->queueOrder = queueOrder;
         this->arriveTime = arriveTime;
     }
-    //เลื่อนlevel
-    int getPriority()const{
-        //เวลาปัจจุบัน
-        time_t currentTime = time(0);
-        //เวลาที่รอ
-        double waitTime = difftime(currentTime, arriveTime);
-        int wiatMinutes = waitTime / 60;
+    // เลื่อน level ถ้ารอนาน
+    int getPriority() const{
+        double waitTime = difftime(time(0), arriveTime);
+        int waitMinutes = waitTime / 60;
 
-        if(level <= 2) return level;
-        if(wiatMinutes > 30) return level - 1;
+        if(level <= NO_PROMOTE_LEVEL) return level;
+        if(waitMinutes > WAIT_LIMIT_MIN) return level - 1;
         return level;
     }
-    // ดูความรุนแรงของอาการ
-    // เลขน้อย = ฉุกเฉินกว่า
+    // ใช้ตำแหน่งใน SYMPTOMS[] เป็น rank (index 0 = rank 1, เลขน้อย = ฉุกเฉินกว่า)
     int inSeriousSysptom() const{
-        int count = sizeof(SYMPTOMS)/sizeof(SYMPTOMS[0]);
-        for(int i = 0; i < count; i++){
+        for(int i = 0; i < SYMPTOM_COUNT; i++){
             if(SYMPTOMS[i] == sysptom) return i + 1;
+        }
+        return DEFAULT_RANK; // ไม่พบอาการ
     }
-    // ไม่พบอาการ
-    return 11;
-    }
-    // เปรียบเทียบ Priority
-    //1. level 2. อาการ 3. ลำดับคิว
+    // 1. level  2. อาการ  3. ลำดับคิว
     bool isHighPriority(const Priority& other) const{
         int myLevel = getPriority();
         int otherLevel = other.getPriority();
-
-        // 1. ดู Level
         if(myLevel < otherLevel) return true;
         if(myLevel > otherLevel) return false;
 
-        // 2. Level เท่ากัน
-        // ดูความฉุกเฉินของอาการ
-        int mySysptomPriority = inSeriousSysptom();
-        int otherSysptomPriority = other.inSeriousSysptom();
+        int mySym = inSeriousSysptom();
+        int otherSym = other.inSeriousSysptom();
+        if(mySym < otherSym) return true;
+        if(mySym > otherSym) return false;
 
-        if(mySysptomPriority < otherSysptomPriority) return true;
-        if(mySysptomPriority > otherSysptomPriority) return false;
-
-        // 3. Level และอาการเท่ากัน
-        // ดูลำดับคิว
         return queueOrder < other.queueOrder;
     }
-    // แสดง Priority
-    void showPriority(){
-        cout << "Level       : " << level << endl;
-        cout << "Symptom     : " << sysptom << endl;
-        cout << "Queue Order : " << queueOrder << endl;
-    }
-    // Getter
-    int getLevel() const { return level; }
-    string getSysptom() const { return sysptom; }
-    int getQueueOrder() const { return queueOrder; }
 };
-class Hospital{ //จัดการคิวผู้ป่วย
+class Hospital{
 private:
-    Patient queue[100];
-    HistoryPatient history[100];
-    int patientCount = 0; //จน.ผู้ป่วยในคิว
+    // คิวผู้ป่วย: index เดียวกัน = คนเดียวกัน
+    string names[MAX_SIZE];
+    string symptoms[MAX_SIZE];
+    int levels[MAX_SIZE];
+    int queueOrders[MAX_SIZE];
+    time_t arriveTimes[MAX_SIZE];
+    int patientCount = 0;
     int orderCount = 0;
+
+    // ประวัติผู้ป่วยที่รักษาแล้ว
+    string histNames[MAX_SIZE];
+    string histSymptoms[MAX_SIZE];
+    int histLevels[MAX_SIZE];
+    time_t histArriveTimes[MAX_SIZE];
+    time_t histServeTimes[MAX_SIZE];
     int historyCount = 0;
 
-    // เพิ่มข้อมูลลงประวัติ
-    void addHistory(Patient p){
-        if(historyCount >= 100){
+    // สร้าง Priority จากผู้ป่วยตำแหน่ง i ในคิว
+    Priority makePriority(int i) const{
+        return Priority(levels[i], symptoms[i], queueOrders[i], arriveTimes[i]);
+    }
+
+    // เพิ่มผู้ป่วยตำแหน่ง i ของคิว ลงประวัติ
+    void addHistory(int i){
+        if(historyCount >= MAX_SIZE){
             cout << "History is full" << endl;
             return;
         }
-        history[historyCount].name = p.name;
-        history[historyCount].symptom = p.symptom;
-        history[historyCount].level = p.level;
-        history[historyCount].arriveTime = p.arriveTime;
-        history[historyCount].serveTime = time(0);
+        histNames[historyCount] = names[i];
+        histSymptoms[historyCount] = symptoms[i];
+        histLevels[historyCount] = levels[i];
+        histArriveTimes[historyCount] = arriveTimes[i];
+        histServeTimes[historyCount] = time(0);
         historyCount++;
     }
 public:
-    Hospital(){ //Constructor
-        patientCount = 0;
-        orderCount = 0;
-    }
-    ~Hospital(){ //Destructor
-    }
-    //ADD PATIENT
+    bool isFull() const{ return patientCount >= MAX_SIZE; }
+
     void addPatient(string name, string symptom, int level){
-        if(patientCount >= 100){
+        if(isFull()){
             cout << "Queue is full" << endl;
             return;
         }
-        queue[patientCount].name = name; //ใส่ข้อมูลลง queue index ถัดไป
-        queue[patientCount].symptom = symptom;
-        queue[patientCount].level = level;
-        queue[patientCount].queueOrder = orderCount++;
-        queue[patientCount].arriveTime = time(0); //เก็บเวลาผู้ป่วยตอนเข้าคิว
+        names[patientCount] = name;
+        symptoms[patientCount] = symptom;
+        levels[patientCount] = level;
+        queueOrders[patientCount] = orderCount++;
+        arriveTimes[patientCount] = time(0);
         patientCount++;
         cout << name << " => added to queue with level " << level << endl;
     }
-    //ADD PATIENT
-    void addPatientInput(){ //รับข้อมูลผู้ป่วย
+
+    void addPatientInput(){
+        if(isFull()){
+            cout << "Queue is full" << endl;
+            return;
+        }
         string name, symptom;
         int level, s;
 
-        //แก้ตรงชื่อใส่อักขระพิเศษได้
         cout << "Enter patient name : ";
-
         while(true){
-            getline(cin >> ws, name); //อ่านชื่อใหม่ทุกรอบ
+            getline(cin >> ws, name);
             bool invalidChar = false;
 
             for(int i = 0; i < (int)name.length(); i++){
                 unsigned char c = (unsigned char)name[i];
                 bool isEnglishLetter = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
                 bool isSpace = (c == ' ');
-                bool isThaiByte = (c >= 0x80); //ตัวอักษรไทยใน UTF-8 จะมี byte แรก >= 0x80
+                bool isThaiByte = (c >= 0x80); // ตัวอักษรไทยใน UTF-8 byte >= 0x80
 
                 if(!(isEnglishLetter || isSpace || isThaiByte)){
                     invalidChar = true; break;
@@ -169,20 +158,20 @@ public:
                 cout << "** Please enter letters only **";
                 cout << endl << "Enter patient name : ";
                 continue;
-            }break;
-        }cout << endl << "========= Select patient symptom =========" << endl;
+            }
+            break;
+        }
 
-        int count = sizeof(SYMPTOMS)/sizeof(SYMPTOMS[0]);
-        for(int i = 0; i < count; i++){
+        cout << endl << "========= Select patient symptom =========" << endl;
+        for(int i = 0; i < SYMPTOM_COUNT; i++){
             cout << i + 1 << ". " << SYMPTOMS[i] << " [" << ZONES[i] << "]" << endl;
         }
-        // แก้เวลารับตัวเลข "5-1", "3-", "56-25" ได้
         while(true){
-            cout << endl << "Enter number (1-" << count << "): ";
+            cout << endl << "Enter number (1-" << SYMPTOM_COUNT << "): ";
 
             string sInput;
             getline(cin, sInput);
-            bool validDigits = !sInput.empty();
+            bool validDigits = !sInput.empty() && sInput.length() <= 9;
 
             for(int i = 0; i < (int)sInput.length(); i++){
                 if(!isdigit((unsigned char)sInput[i])){
@@ -191,192 +180,188 @@ public:
                 }
             }
             if(validDigits){
-                s = stoi(sInput); //แปลงข้อความเป็นตัวเลข หลังจากมั่นใจแล้วว่าเป็นตัวเลขล้วนๆ
-                if(s >= 1 && s <= count) break; //ผ่านทุกเงื่อนไข ออกจาก loop
+                s = stoi(sInput);
+                if(s >= 1 && s <= SYMPTOM_COUNT) break;
             }
             cout << "** Invalid symptom number **" << endl;
-        }symptom = SYMPTOMS[s - 1];
+        }
+        symptom = SYMPTOMS[s - 1];
 
-        while(true){ //check level input
-            //1.วิกฤต, 2.ฉุกเฉิน, 3.ไม่รุนแรง, 4.ทั่วไป
+        while(true){
             cout << endl << "========================= Enter patient level =========================" << endl;
-            for (int i = 0; i < 4; i++){
+            for(int i = 0; i < LEVEL_COUNT; i++){
                 cout << " " << i + 1 << "." << LEVELS[i];
-                if(i < 3) cout << "/";
-            } cout << " : ";
+                if(i < LEVEL_COUNT - 1) cout << "/";
+            }
+            cout << " : ";
 
-            if(cin >> level && level >= 1 && level <= 4){
+            if(cin >> level && level >= 1 && level <= LEVEL_COUNT){
                 string check;
                 getline(cin, check);
 
                 bool hasStrange = false;
-                for(int i=0; i<(int)check.length(); i++){
+                for(int i = 0; i < (int)check.length(); i++){
                     if(!isspace((unsigned char)check[i])){
                         hasStrange = true; break;
                     }
                 }
                 if(!hasStrange) break;
-                cout << "** Invalid level, please enter level 1-4 **" << endl;
+                cout << "** Invalid level, please enter level 1-" << LEVEL_COUNT << " **" << endl;
             }else{
-                cout << "** Invalid level, please enter level 1-4 **" << endl;
-                cin.clear(); //clear ค่าที่ usr กรอกผิดออก
+                cout << "** Invalid level, please enter level 1-" << LEVEL_COUNT << " **" << endl;
+                cin.clear();
                 cin.ignore(1000, '\n');
             }
-        }addPatient(name, symptom, level); //เก็บค่าที่กรอกถูกลง queue
+        }
+        addPatient(name, symptom, level);
     }
-    //SHOW
+
     void showQueue(){
         if(patientCount == 0){
             cout << "Queue is empty" << endl;
             return;
         }
-        // สร้าง array เก็บ index แล้วเรียงตามลำดับที่จะถูกเรียกรักษา (ไม่แตะ queue จริง)
-        int order[100];
+        // order[] เก็บ index เรียงตามลำดับที่จะถูกเรียก (ไม่แตะคิวจริง)
+        int order[MAX_SIZE];
         for(int i = 0; i < patientCount; i++) order[i] = i;
 
-        // insertion sort โดยใช้ isHighPriority เป็นตัวเทียบ
+        // insertion sort ใช้ isHighPriority เป็นตัวเทียบ
         for(int i = 1; i < patientCount; i++){
             int key = order[i];
-            Priority keyP(queue[key].level, queue[key].symptom, queue[key].queueOrder, queue[key].arriveTime);
+            Priority keyP = makePriority(key);
             int j = i - 1;
             while(j >= 0){
-                Priority other(queue[order[j]].level, queue[order[j]].symptom, queue[order[j]].queueOrder, queue[order[j]].arriveTime);
+                Priority other = makePriority(order[j]);
                 if(keyP.isHighPriority(other)){
                     order[j + 1] = order[j];
                     j--;
-                } else break;
-            } order[j + 1] = key;
+                }else break;
+            }
+            order[j + 1] = key;
         }
-        // แสดงผลตามลำดับที่จะถูกเรียก
-        cout << endl << "=========== Show Queue Patients ===========" << endl;
 
+        cout << endl << "=========== Show Queue Patients ===========" << endl;
         for(int r = 0; r < patientCount; r++){
-            Patient &p = queue[order[r]];
-            Priority pr(p.level, p.symptom, p.queueOrder, p.arriveTime);
+            int p = order[r];
+            Priority pr = makePriority(p);
+            int idx = pr.inSeriousSysptom() - 1;
 
             cout << "\n*** Serve Queue " << r + 1;
             if(r == 0) cout << " >>> NEXT";
 
-            cout << endl << "(" << p.name << ")"
-                 << " Symptom is " << p.symptom
+            cout << endl << "(" << names[p] << ")"
+                 << " Symptom is " << symptoms[p]
                  << endl << "Effective level: " << pr.getPriority()
-                 << " | Symptom rank: " << pr.inSeriousSysptom()
-                 << endl << "Arrive queue: " << p.queueOrder + 1
-                 << endl << "Time: " << ctime(&p.arriveTime);
+                 << " | Symptom rank: " << pr.inSeriousSysptom() << " | Zone: " << ZONES[idx]
+                 << endl << "Arrive queue: " << queueOrders[p] + 1
+                 << endl << "Time: " << ctime(&arriveTimes[p]);
             cout << "-------------------------------------------";
         }
         cout << endl;
     }
-    //SERVE
-    // penguin
+
     void servePatient(){
         if(patientCount == 0){
             cout << "Queue is empty, no one to serve" << endl;
             return;
         }
-        //index ของคนที่ต้องรักษาก่อน (priority สูงสุด)
-        int bestIndex = 0; //เริ่มสมมติว่าคนแรกสุดคือคนที่ priority สูงสุดก่อน
-
+        // หา index ของคนที่ priority สูงสุด
+        int bestIndex = 0;
         for(int i = 1; i < patientCount; i++){
-            Priority current(queue[i].level, queue[i].symptom, queue[i].queueOrder, queue[i].arriveTime);
-            Priority best(queue[bestIndex].level, queue[bestIndex].symptom, queue[bestIndex].queueOrder, queue[bestIndex].arriveTime);
-
+            Priority current = makePriority(i);
+            Priority best = makePriority(bestIndex);
             if(current.isHighPriority(best)) bestIndex = i;
         }
-        //แสดงข้อมูลคนที่ถูกเรียกไปรักษา
-        cout << "=> Now patient: " << queue[bestIndex].name << " | Symptom: " << queue[bestIndex].symptom << " | Level " << queue[bestIndex].level << endl;
+
+        cout << "=> Now patient: " << names[bestIndex] << " | Symptom: " << symptoms[bestIndex]
+             << " | Level " << levels[bestIndex] << " (" << LEVELS[levels[bestIndex] - 1] << ")" << endl;
         cout << "------------------------------------------------------------------------------------------------" << endl;
 
-        // เก็บข้อมูลผู้ป่วยก่อนลบออกจาก queue
-        addHistory(queue[bestIndex]);
+        addHistory(bestIndex);
 
-        //ลบคนนี้ออกจาก array โดยเลื่อนสมาชิกที่เหลือขึ้นมาแทนที่ (ปิดช่องว่าง)
+        // ลบออกจากคิว: เลื่อนสมาชิกถัดไปขึ้นมา ทำครบทุก array
         for(int i = bestIndex; i < patientCount - 1; i++){
-            queue[i] = queue[i + 1];
-        }patientCount--; //ลดจำนวนผู้ป่วยในคิวลง 1
+            names[i] = names[i + 1];
+            symptoms[i] = symptoms[i + 1];
+            levels[i] = levels[i + 1];
+            queueOrders[i] = queueOrders[i + 1];
+            arriveTimes[i] = arriveTimes[i + 1];
+        }
+        patientCount--;
     }
-    //card kub
-    // Function 5 : Patient History & Statistics
-    // เก็บและแสดงประวัติผู้ป่วย
-    void function5(){
+
+    void showHistory(){
         cout << endl << "=========== PATIENT HISTORY & STATISTICS ===========" << endl;
 
         if(historyCount == 0){
             cout << "No patient history" << endl;
             return;
         }
-        // แสดงประวัติผู้ป่วยแต่ละคน
+        double totalTime = 0;
         for(int i = 0; i < historyCount; i++){
             cout << endl << "Patient " << i + 1 << endl;
-            cout << "Name       : " << history[i].name << endl;
-            cout << "Symptom    : " << history[i].symptom << endl;
-            cout << "Level      : " << history[i].level << endl;
-            cout << "Arrive time: " << ctime(&history[i].arriveTime);
-            cout << "Serve time : " << ctime(&history[i].serveTime);
+            cout << "Name       : " << histNames[i] << endl;
+            cout << "Symptom    : " << histSymptoms[i] << endl;
+            cout << "Level      : " << histLevels[i] << " (" << LEVELS[histLevels[i] - 1] << ")" << endl;
+            cout << "Arrive time: " << ctime(&histArriveTimes[i]);
+            cout << "Serve time : " << ctime(&histServeTimes[i]);
 
-            double waitTime = difftime(history[i].serveTime, history[i].arriveTime);
-            cout << "Waiting time : " << fixed << setprecision(2) << waitTime/60.0 << " minute(s)" << endl;
+            double waitTime = difftime(histServeTimes[i], histArriveTimes[i]);
+            totalTime += waitTime;
+            cout << "Waiting time : " << fixed << setprecision(2) << waitTime / 60.0 << " minute(s)" << endl;
         }
-        // คำนวณเวลาเฉลี่ย
-        double totalTime = 0;
-        double averageTime = 0;
-        for(int i = 0; i < historyCount; i++){
-            totalTime += difftime(history[i].serveTime, history[i].arriveTime);
-        }
-        averageTime = totalTime / historyCount / 60.0;
+        double averageTime = totalTime / historyCount / 60.0;
         cout << endl << "Average waiting time : " << fixed << setprecision(2) << averageTime << " minute(s)" << endl;
-        // นับผู้ป่วยแต่ละ Level
-        int levelCount[5] = {0};
-        for(int i = 0; i < historyCount; i++){
-            if(history[i].level >= 1 && history[i].level <= 4)
-                levelCount[history[i].level]++;
-        }cout << endl << "Patients treated by level" << endl;
 
-        for(int i = 1; i <= 4; i++){
-            cout << "Level " << i << " : " << levelCount[i] << " patient(s)" << endl;
+        // นับผู้ป่วยแต่ละ level (index 1..LEVEL_COUNT)
+        int levelCount[LEVEL_COUNT + 1] = {0};
+        for(int i = 0; i < historyCount; i++){
+            if(histLevels[i] >= 1 && histLevels[i] <= LEVEL_COUNT)
+                levelCount[histLevels[i]]++;
         }
-        // หา Level ที่มีผู้ป่วยถูกเรียกมารักษามากที่สุด
+        cout << endl << "Patients treated by level" << endl;
+        for(int i = 1; i <= LEVEL_COUNT; i++){
+            cout << "Level " << i << " (" << LEVELS[i - 1] << ") : " << levelCount[i] << " patient(s)" << endl;
+        }
+
         int maxLevel = 1;
-        for(int i = 2; i <= 4; i++){
-            if(levelCount[i] > levelCount[maxLevel])
-                maxLevel = i;
+        for(int i = 2; i <= LEVEL_COUNT; i++){
+            if(levelCount[i] > levelCount[maxLevel]) maxLevel = i;
         }
-        cout << endl << "Most treated level : Level "
-             << maxLevel << " (" << levelCount[maxLevel]
-             << " patient(s))" << endl;
+        cout << endl << "Most treated level : Level " << maxLevel << " (" << LEVELS[maxLevel - 1] << ") - "
+             << levelCount[maxLevel] << " patient(s)" << endl;
         cout << "=====================================================" << endl;
     }
 };
+
 int main(){
     Hospital h;
     string choice;
 
     cout << endl << "================================= Welcome to JubuJubu Hospital =================================" << endl;
-    int menuCount = sizeof(MENU)/sizeof(MENU[0]);
     do{
         cout << endl << "(Choose number) ";
-        for(int i = 0; i < menuCount; i++){
+        for(int i = 0; i < MENU_COUNT; i++){
             cout << i + 1 << "." << MENU[i];
-            if(i < menuCount - 1) cout << "/ ";
-        } cout << ": ";
+            if(i < MENU_COUNT - 1) cout << "/ ";
+        }
+        cout << ": ";
 
-        // penguin
         getline(cin >> ws, choice);
 
         if(choice == "1"){
             h.addPatientInput();
         }else if(choice == "2"){
-            h.servePatient(); //เรียกฟังก์ชัน Serve
+            h.servePatient();
         }else if(choice == "3"){
             h.showQueue();
         }else if(choice == "4"){
-            // เรียกดูประวัติและสถิติผู้ป่วย
-            h.function5();
+            h.showHistory();
         }else if(choice == "5"){
-            cout << "Exited ..." << endl; //เปลียนออกเป็น 5 แทน
+            cout << "Exited ..." << endl;
         }else{
             cout << "** Invalid number, please enter again **" << endl;
         }
-    } while(choice != "5"); //เพิ่มฟังชันมาใหม่จู้
+    } while(choice != "5");
     return 0;
 }
