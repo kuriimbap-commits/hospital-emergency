@@ -45,6 +45,7 @@ private:
     int queueOrders[MAX_SIZE];
     time_t arriveTimes[MAX_SIZE];
     int patientCount = 0;
+    int order[MAX_SIZE];
     int orderCount = 0;
  
     // ประวัติผู้ป่วยที่รักษาแล้ว
@@ -207,7 +208,6 @@ public:
             return;
         }
         // order[] เก็บ index เรียงตามลำดับที่จะถูกเรียก
-        int order[MAX_SIZE];
         for(int i = 0; i < patientCount; i++) order[i] = i;
  
         // insertion sort ใช้ isHighPriority เป็นตัวเทียบ (ดึงค่าจาก priority[])
