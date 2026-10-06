@@ -19,7 +19,7 @@ const string ZONES[] = {
 const string LEVELS[] = {"Emergency", "Urgency", "Semi-urgency", "Non-urgency"};
 const string MENU[] = {"Add Patient", "Serve Patient", "Show Queue", "History & Statistics", "Exit"};
 
-// จำนวนสมาชิก คำนวณจาก array เอง (ไม่ต้องนับมือ)
+// นับจำนวนสมาชิกของ SYMPTOMS[], LEVELS[], MENU[]
 const int SYMPTOM_COUNT = sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]);
 const int LEVEL_COUNT   = sizeof(LEVELS)   / sizeof(LEVELS[0]);
 const int MENU_COUNT    = sizeof(MENU)     / sizeof(MENU[0]);
@@ -28,20 +28,19 @@ const int NO_PROMOTE_LEVEL = 2;   // level 1-2 ไม่เลื่อนขั
 const int WAIT_LIMIT_MIN   = 30;  // รอเกินกี่นาทีถึงเลื่อน level
 const int DEFAULT_PRIORITY = 11;  // priority เมื่อไม่พบอาการ
 
-// priority[k] = ค่าความสำคัญของอาการ SYMPTOMS[k] (ยิ่งน้อยยิ่งต้องรักษาก่อน)
 int priority[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
 int n = sizeof(priority) / sizeof(priority[0]);
 
-// ตรวจตอนคอมไพล์ว่า SYMPTOMS, ZONES, priority[] มีจำนวนเท่ากัน
+// check ว่า priority[], SYMPTOMS[], ZONES[] เท่ากัน
 static_assert(sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]) == sizeof(ZONES) / sizeof(ZONES[0]), "SYMPTOMS and ZONES must have the same size");
 static_assert(sizeof(priority) / sizeof(priority[0]) == sizeof(SYMPTOMS) / sizeof(SYMPTOMS[0]), "priority[] and SYMPTOMS must have the same size");
 
-// ข้อมูลผู้ป่วย 1 คน (รวมทุกอย่างไว้ที่เดียว)
+// ข้อมูลผู้ป่วย 1 คน
 struct Patient{
     string name;
-    string symptom;
+    string symptom; //เทียบกับ SYMPTOMS[]
     int level;
-    int queueOrder;
+    int queueOrder; //ลำดับการมาถึง
     time_t arriveTime;
 };
 
@@ -49,48 +48,48 @@ class Hospital{ //จัดการคิว
 private:
     // คิวผู้ป่วย: array เดียว เรียงตามความสำคัญ (ตำแหน่ง 0 = คนถัดไป)
     Patient patients[MAX_SIZE];
-    int patientCount = 0;
-    int orderCount = 0;
+    int patientCount = 0; //จน.ผู้ป่วยในคิว
+    int orderCount = 0; //นับจน.คิว
 
-    // ประวัติผู้ป่วยที่รักษาแล้ว
-    string histNames[MAX_SIZE];
+    // ประวัติผู้ป่วยที่รักษาแล้ว (index เดียวกัน = คนเดียวกัน)
+    string histNames[MAX_SIZE]; //เก็บสูงสุด 100 คน
     string histSymptoms[MAX_SIZE];
     int histLevels[MAX_SIZE];
     time_t histArriveTimes[MAX_SIZE];
     time_t histServeTimes[MAX_SIZE];
-    int historyCount = 0;
+    int historyCount = 0; //นับจน.ประวัติที่รักษาแล้ว (ใช้ใน showHistory)
 
-    // level หลังเลื่อนขั้น (ถ้ารอนาน) ของผู้ป่วยตำแหน่ง i
     int effectiveLevel(int i) const{
-        int waitMinutes = (int)difftime(time(0), patients[i].arriveTime) / 60;
-        if(patients[i].level <= NO_PROMOTE_LEVEL) return patients[i].level;
-        if(waitMinutes > WAIT_LIMIT_MIN) return patients[i].level - 1;
-        return patients[i].level;
+        int waitMinutes = (int)difftime(time(0), patients[i].arriveTime) / 60; //หาเวลาที่รอเป็นนาที
+        if(patients[i].level <= NO_PROMOTE_LEVEL) return patients[i].level; //return level เดิม
+        if(waitMinutes > WAIT_LIMIT_MIN) return patients[i].level - 1; //รอเกิน 30 นาที เลื่อนคิว
+        return patients[i].level; //รอไม่เกิน 30 นาที return level เดิม
     }
-    // วนหาอาการของผู้ป่วยตำแหน่ง i ใน SYMPTOMS[] คืนตำแหน่ง k (ไม่พบคืน -1)
+    //check ว่า index อาการตรงกับอาการผู้ป่วยไหม
     int symptomIndex(int i) const{
-        for(int k = 0; k < n; k++){
+        for(int k = 0; k < n; k++){ //k คือ index อาการ
             if(SYMPTOMS[k] == patients[i].symptom) return k;
         }
-        return -1;
+        return -1; //ไม่พบอาการ
     }
-    // ค่า priority[] ของอาการผู้ป่วยตำแหน่ง i (ยิ่งน้อยยิ่งหนัก)
     int symptomPriority(int i) const{
         int k = symptomIndex(i);
-        if(k == -1) return DEFAULT_PRIORITY;   // ไม่พบอาการ
-        return priority[k];
+        if(k == -1) return DEFAULT_PRIORITY; // ไม่พบอาการ
+        return priority[k]; //พบอาการ
     }
-    // ผู้ป่วย a ควรได้รักษาก่อน b หรือไม่
+    //check ว่าใครได้รักษาก่อน (เทียบผู้ป่วย 2 คน)
     bool isHighPriority(int a, int b) const{
-        int levelA = effectiveLevel(a);
+        int levelA = effectiveLevel(a); //เรียก effectiveLevel เพื่อดู level
         int levelB = effectiveLevel(b);
-        if(levelA != levelB) return levelA < levelB;
+        if(levelA != levelB) return levelA < levelB; //เทียบ level (return true เเล้วไม่ทำงานด้านล่าง)
 
-        int priA = symptomPriority(a);
+        //level เท่ากันทำงานต่อ
+        int priA = symptomPriority(a); //เรียก symptomPriority เพื่อดู priority อาการ
         int priB = symptomPriority(b);
-        if(priA != priB) return priA < priB;
+        if(priA != priB) return priA < priB; //เทียบ priority อาการ (return true เเล้วไม่ทำงานด้านล่าง)
 
-        return patients[a].queueOrder < patients[b].queueOrder;
+        //level และ priority อาการเท่ากัน
+        return patients[a].queueOrder < patients[b].queueOrder; //เทียบลำดับการมาถึง
     }
     // เรียง patients[] ตามความสำคัญ (insertion sort สลับทั้งคนในครั้งเดียว)
     // ต้องเรียกก่อนใช้งานทุกครั้ง เพราะ effectiveLevel เปลี่ยนตามเวลา
