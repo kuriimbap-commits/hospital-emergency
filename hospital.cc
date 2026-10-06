@@ -38,7 +38,7 @@ static_assert(sizeof(priority) / sizeof(priority[0]) == sizeof(SYMPTOMS) / sizeo
  
 class Hospital{ //จัดการคิว
 private:
-    // คิวผู้ป่วย: index เดียวกัน = คนเดียวกัน
+    // คิวผู้ป่วย: index เดียวกัน = คนเดียวกัน นะจ๊ะ
     string names[MAX_SIZE];
     string symptoms[MAX_SIZE];
     int levels[MAX_SIZE];
